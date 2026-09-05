@@ -3,3 +3,5 @@ fastapi==0.111.0
 uvicorn==0.30.1
 jinja2==3.1.4
 python-multipart==0.0.9
+python-dotenv==1.0.1
+hachoir==3.3.0

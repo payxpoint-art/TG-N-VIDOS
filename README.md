@@ -1,88 +1,106 @@
-# Telegram Channel Backup Tool (channel se channel, Google Drive nahi chahiye)
+# Telegram Channel Backup Tool
 
-Ab Google Drive ka jhanjhat khatam. Tool aise kaam karta hai:
-1. Source channel select karo (jiska backup lena hai)
-2. Destination channel/group select karo (jaha backup jayega)
-3. Tool har video/photo/file ko pehle apne server pe download karega, fir usse
-   destination channel me naya message bana ke bhej dega (forward nahi — kyunki
-   forwarding off hai, isliye download+upload tarika use ho raha hai)
-4. Dashboard pe live logs aur stats dikhte rahenge (kitna backup hua, koi error
-   aaya to turant wahi dikh jayega)
+## Is version me kya naya hai
 
-## Step 1 — Telegram API credentials lo
-1. `my.telegram.org` pe jao, apne number se login karo
-2. "API Development Tools" pe click karo
-3. Koi bhi App name daal ke create karo
-4. **api_id** aur **api_hash** milega — safe copy kar lo
+1. **Album/Group support** — Agar source me 5 photos/videos ek saath ek
+   group me post hui thi, to destination pe bhi wo **ek hi group** me
+   jayengi — alag-alag messages nahi banenge.
+2. **Video properly playable** — Original video ki duration/quality info
+   copy hoti hai, taki destination pe bhi normal Telegram video jaisa hi
+   chale (ek tap me play), "file" jaisa dikhke do-do baar click na karna
+   pade.
+3. **Bade se bada video bhi jayega** — Koi hard size limit nahi (userbot
+   2GB+ tak normally handle kar leta hai).
+4. **Caption bilkul original jaisa** — Ab sirf original caption + niche
+   "Original date" aur ek chhota tracking tag (`SRC_ID`) jata hai, koi extra
+   numbering nahi (jaisa pehle tha).
+5. **Telegram Bot — single message live update** — Backup start karne ke
+   baad bot EK message bhejta hai jo har 8 second me khud update (edit)
+   hota rehta hai jab tak backup complete na ho jaye — chat me spam nahi
+   hota.
+6. **Cross-account resume** — Naye Railway account/deployment pe bhi
+   destination channel se khud pata laga leta hai kaha tak backup ho chuka
+   tha, dobara se shuru nahi hoga.
 
-## Step 2 — Session string banao (apne computer pe, sirf ek baar)
-1. Python installed honi chahiye
-2. Terminal me:
-   ```
-   pip install telethon
-   ```
-3. Isi repo ki `generate_session.py` file apne computer pe rakho, chalao:
-   ```
-   python generate_session.py
-   ```
-4. api_id, api_hash daalo, phone number daalo, OTP daalo
-5. Jo lambi session string print hogi wo copy kar lo (kisi ke saath share mat karna)
+---
 
-## Step 3 — GitHub pe code push karo
+## Step 1 — Telegram API credentials
+`my.telegram.org` > API Development Tools > App banao > **api_id**, **api_hash** milega
+
+## Step 2 — Session string (apna account, ek baar local pe)
 ```
-git init
+pip install telethon
+python generate_session.py
+```
+
+## Step 3 — Telegram Bot banao
+1. `@BotFather` ko `/newbot` bhejo, naam/username do
+2. **Bot Token** milega
+3. Us bot ko Telegram me kholke ek baar **"Start"** dabao
+
+## Step 4 — Apna Owner ID nikalo
+`@userinfobot` ko message karo, wo numeric ID bata dega
+
+## Step 5 — `.env` file me values daalo
+
+Chunki repo private hai, seedha `.env` file edit karo:
+```
+TG_API_ID=23456789
+TG_API_HASH=a1b2c3d4e5f6...
+TG_SESSION_STRING=1BvcM...
+TG_BOT_TOKEN=123456:ABC-DEF1234...
+TG_OWNER_ID=123456789
+CONCURRENCY=5
+BATCH_SIZE=5
+```
+
+## Step 6 — GitHub pe push karo
+```
 git add .
-git commit -m "initial commit"
-git branch -M main
-git remote add origin https://github.com/USERNAME/tg-backup-tool.git
-git push -u origin main
+git commit -m "update"
+git push
 ```
+Railway automatically redeploy karega — Variables tab me kuch manually
+daalne ki zaroorat nahi, code khud `.env` se read kar lega.
 
-## Step 4 — Railway pe deploy karo
-1. `railway.app` > "New Project" > "Deploy from GitHub repo" > apna repo select karo
-2. "Variables" tab me sirf ye 3 daalo:
-   ```
-   TG_API_ID = <Step 1 wala api_id>
-   TG_API_HASH = <Step 1 wala api_hash>
-   TG_SESSION_STRING = <Step 2 wali session string>
-   ```
-3. Deploy hone do
+⚠️ Ye tarika sirf tab safe hai jab tak repo **private** hai.
 
-## Step 5 — Domain nikalo aur use karo
-1. Railway "Settings" > "Networking" > "Generate Domain"
-2. Wo URL kholo — saare groups/channels dikhenge
-3. Jis channel ka backup lena hai uske aage "Select" dabao
-4. Ab destination list dikhegi — jis channel/group me backup bhejna hai wahan
-   "Yaha Backup Karo" dabao
-5. Turant niche live stats aur logs dikhne lagenge:
-   - Kitne videos/photos/files backup hue
-   - Kitne fail hue, aur kyun (exact error line-by-line)
-6. Backup background me chalta rahega, browser band kar bhi do to Railway pe
-   chalta rahega
-7. Beech me ruk jaye to dobara "Select" > "Yaha Backup Karo" dabao — resume
-   hoga (last message se aage se chalega, dobara shuru nahi hoga)
+---
+
+## Use kaise karo
+
+### Telegram Bot se (recommended)
+1. Apne bot ko kholo, `/start` ya `/channels` bhejo
+2. Numbered list aayegi — **jis channel ka backup lena hai uska number bhejo**
+3. Fir **destination channel ka number bhejo**
+4. Backup shuru ho jayega — ek message aayega jo **khud update hota rahega**
+   (live progress: Videos/Photos/Files/Texts/Failed count)
+5. `/status` bhej ke kabhi bhi summary dekh sakte ho
+
+### Web Dashboard se
+Railway domain kholo, channel select karo, destination select karo, live
+stats + logs dikhenge.
+
+---
 
 ## Important Notes
-- **Duplicate-proof:** Har successfully bheja gaya message DB me record hota
-  hai. Agar tool restart ho jaye (Railway crash/redeploy) aur aap dobara
-  "Backup Start" dabao, jo messages pehle se bhej diye gaye the wo dobara
-  nahi bhejenge — sirf jo baaki hai wahi continue hoga.
-- **Caption counting:** Har video/photo/file ke saath uska serial number bhi
-  jata hai (jaise "Video #12", "Photo #5") — original caption (agar tha) uske
-  neeche add ho jata hai.
-- **Rate limit:** Telegram thoda dheere-dheere allow karta hai bahut saara
-  download/upload karne pe. 10,000 items me time lagega, chalta rehne dena.
-- **Speed control (optional):** Railway Variables me ye daal sakte ho:
+
+- **Duplicate-proof + cross-account resume:** Har group/message DB me aur
+  khud destination channel me (`SRC_ID` tag) record hota hai. Naya Railway
+  account ho ya deployment restart ho, tool khud detect kar leta hai kaha
+  tak ho chuka tha.
+- **Caption format** ab bilkul simple hai:
   ```
-  CONCURRENCY = 5   (ek saath kitne messages process honge)
-  BATCH_SIZE = 5    (kitne messages ke baad progress save ho)
+  <original caption agar tha>
+  Original date: 05 Sep 2026, 08:15 PM
+  SRC_ID:98234
   ```
-  Zyada CONCURRENCY (15-20+) mat rakhna — Telegram FloodWaitError de sakta hai.
-- **Storage:** Railway ka disk temporary hota hai — file download hote hi
-  turant send karke delete ho jaati hai, isliye disk space ki dikkat nahi
-  aani chahiye.
-- **Progress DB:** `backup.db` file me progress save hoti hai. Railway restart
-  hone par ye reset ho sakti hai agar Volume attach nahi hai. Agar aisa ho to
-  bata dena, Postgres wala permanent solution bana denge.
-- **TG_SESSION_STRING** kisi ke saath share mat karna — password jaisa hi
-  sensitive hai.
+  `SRC_ID` line ko destination channel se delete/edit mat karna, isi se
+  resume feature kaam karta hai.
+- **Video quality:** Videos apni original duration/resolution ke sath
+  jaate hain, streaming-enabled — normal video jaisa play hoga.
+- **Speed:** `CONCURRENCY` (parallel workers) aur `BATCH_SIZE` `.env` me
+  tune kar sakte ho. `CONCURRENCY` 8-10 se zyada mat rakhna (Telegram
+  FloodWaitError de sakta hai).
+- **TG_SESSION_STRING aur TG_BOT_TOKEN** kisi ke saath share mat karna.
+- Bot sirf `TG_OWNER_ID` wale account ko respond karta hai — safe hai.

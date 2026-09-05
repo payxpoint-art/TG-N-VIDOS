@@ -48,7 +48,7 @@ async function poll() {
   const data = await res.json();
 
   document.getElementById('stats').innerText =
-    `Videos: ${data.total_videos||0} | Photos: ${data.total_photos||0} | Files: ${data.total_files||0} | Failed: ${data.total_failed||0} | Status: ${data.status||'not started'}`;
+    `Videos: ${data.total_videos||0} | Photos: ${data.total_photos||0} | Files: ${data.total_files||0} | Texts: ${data.total_texts||0} | Failed: ${data.total_failed||0} | Status: ${data.status||'not started'}`;
 
   const logs = data.logs || [];
   document.getElementById('logbox').innerText = logs.join("\n");

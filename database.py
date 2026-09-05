@@ -20,15 +20,20 @@ def init_db():
             total_videos INTEGER DEFAULT 0,
             total_photos INTEGER DEFAULT 0,
             total_files INTEGER DEFAULT 0,
+            total_texts INTEGER DEFAULT 0,
             total_failed INTEGER DEFAULT 0,
             status TEXT DEFAULT 'idle',
             logs TEXT DEFAULT '[]'
         )
     """)
-    # Ye table har successfully bheje gaye message ko permanently record karta
-    # hai. Isse agar tool beech me restart ho jaye, dobara start karne par
-    # wahi messages skip ho jayenge jo already bhej diye gaye the — chahe
-    # 'last_message_id' checkpoint thoda peeche ho.
+    # Purane DB me agar total_texts column na ho to add kar do (safe upgrade)
+    try:
+        c.execute("ALTER TABLE backup_progress ADD COLUMN total_texts INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # already exists
+
+    # Har successfully bheja gaya message permanently record hota hai — isse
+    # restart/redeploy hone par duplicate upload nahi hote.
     c.execute("""
         CREATE TABLE IF NOT EXISTS sent_messages (
             channel_id TEXT,
@@ -64,6 +69,12 @@ def get_progress(channel_id):
         except Exception:
             result["logs"] = []
         return result
+
+
+def get_all_progress():
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM backup_progress").fetchall()
+        return [dict(r) for r in rows]
 
 
 def upsert_progress(channel_id, **fields):
