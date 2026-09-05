@@ -7,39 +7,21 @@
     body { font-family: Arial, sans-serif; max-width: 700px; margin: 30px auto; padding: 0 15px; }
     h2 { color: #2b6cb0; }
     ul { list-style: none; padding: 0; }
-    li { background: #f4f6f8; margin-bottom: 10px; padding: 12px 15px; border-radius: 8px; }
-    button { background: #2b6cb0; color: white; border: none; padding: 6px 14px; border-radius: 5px; cursor: pointer; margin-left: 10px; }
-    button:hover { background: #1e4e8c; }
-    .stats { display: block; margin-top: 6px; font-size: 14px; color: #333; }
+    li { background: #f4f6f8; margin-bottom: 10px; padding: 12px 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    a.btn { background: #2b6cb0; color: white; border: none; padding: 6px 14px; border-radius: 5px; cursor: pointer; text-decoration: none; font-size: 14px; }
+    a.btn:hover { background: #1e4e8c; }
   </style>
 </head>
 <body>
 <h2>Apne Groups / Channels</h2>
+<p>Jis channel ka backup lena hai uske aage "Select" dabao, uske baad destination channel choose karoge.</p>
 <ul>
 {% for d in dialogs %}
   <li>
     <strong>{{ d.name }}</strong>
-    <button onclick="startBackup('{{ d.id }}')">Backup Start</button>
-    <span class="stats" id="status-{{ d.id }}"></span>
+    <a class="btn" href="/select-destination/{{ d.id }}">Select</a>
   </li>
 {% endfor %}
 </ul>
-
-<script>
-async function startBackup(id) {
-  await fetch(`/start-backup/${id}`, { method: "POST" });
-  poll(id);
-}
-
-async function poll(id) {
-  const res = await fetch(`/status/${id}`);
-  const data = await res.json();
-  document.getElementById(`status-${id}`).innerText =
-    `Videos: ${data.total_videos||0} | Photos: ${data.total_photos||0} | Files: ${data.total_files||0} | Failed: ${data.total_failed||0} | Status: ${data.status||'not started'}`;
-  if (data.status === "running") {
-    setTimeout(() => poll(id), 3000);
-  }
-}
-</script>
 </body>
 </html>

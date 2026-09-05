@@ -1,7 +1,10 @@
 import sqlite3
+import json
 from contextlib import contextmanager
 
 DB_PATH = "backup.db"
+
+MAX_LOG_LINES = 100
 
 
 def init_db():
@@ -11,12 +14,15 @@ def init_db():
         CREATE TABLE IF NOT EXISTS backup_progress (
             channel_id TEXT PRIMARY KEY,
             channel_name TEXT,
+            destination_id TEXT,
+            destination_name TEXT,
             last_message_id INTEGER DEFAULT 0,
             total_videos INTEGER DEFAULT 0,
             total_photos INTEGER DEFAULT 0,
             total_files INTEGER DEFAULT 0,
             total_failed INTEGER DEFAULT 0,
-            status TEXT DEFAULT 'idle'
+            status TEXT DEFAULT 'idle',
+            logs TEXT DEFAULT '[]'
         )
     """)
     conn.commit()
@@ -39,7 +45,14 @@ def get_progress(channel_id):
         row = conn.execute(
             "SELECT * FROM backup_progress WHERE channel_id=?", (channel_id,)
         ).fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        result = dict(row)
+        try:
+            result["logs"] = json.loads(result.get("logs") or "[]")
+        except Exception:
+            result["logs"] = []
+        return result
 
 
 def upsert_progress(channel_id, **fields):
@@ -58,3 +71,12 @@ def upsert_progress(channel_id, **fields):
                 f"INSERT INTO backup_progress ({cols}) VALUES ({qs})",
                 (channel_id, *fields.values())
             )
+
+
+def add_log(channel_id, message):
+    progress = get_progress(channel_id) or {}
+    logs = progress.get("logs", [])
+    logs.append(message)
+    if len(logs) > MAX_LOG_LINES:
+        logs = logs[-MAX_LOG_LINES:]
+    upsert_progress(channel_id, logs=json.dumps(logs))

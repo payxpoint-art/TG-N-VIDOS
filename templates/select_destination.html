@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Destination Select</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 30px auto; padding: 0 15px; }
+    h2 { color: #2b6cb0; }
+    ul { list-style: none; padding: 0; }
+    li { background: #f4f6f8; margin-bottom: 10px; padding: 12px 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    button { background: #2b6cb0; color: white; border: none; padding: 6px 14px; border-radius: 5px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #1e4e8c; }
+    .stats { background: #eef; padding: 10px 15px; border-radius: 8px; margin-top: 20px; font-size: 14px; }
+    .logbox { background: #111; color: #0f0; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 8px; height: 300px; overflow-y: auto; margin-top: 10px; white-space: pre-wrap; }
+    .back { display: inline-block; margin-bottom: 15px; color: #2b6cb0; }
+  </style>
+</head>
+<body>
+<a class="back" href="/">&larr; Wapas</a>
+<h2>Destination select karo</h2>
+<p>Backup kis channel/group me bhejna hai:</p>
+<ul id="dest-list">
+{% for d in dialogs %}
+  <li>
+    <strong>{{ d.name }}</strong>
+    <button onclick="startBackup('{{ d.id }}', '{{ d.name }}')">Yaha Backup Karo</button>
+  </li>
+{% endfor %}
+</ul>
+
+<div id="progress-area" style="display:none;">
+  <div class="stats" id="stats"></div>
+  <div class="logbox" id="logbox"></div>
+</div>
+
+<script>
+const sourceId = "{{ source_id }}";
+
+async function startBackup(destId, destName) {
+  document.getElementById('dest-list').style.display = 'none';
+  document.getElementById('progress-area').style.display = 'block';
+  await fetch(`/start-backup/${sourceId}/${destId}`, { method: "POST" });
+  poll();
+}
+
+async function poll() {
+  const res = await fetch(`/status/${sourceId}`);
+  const data = await res.json();
+
+  document.getElementById('stats').innerText =
+    `Videos: ${data.total_videos||0} | Photos: ${data.total_photos||0} | Files: ${data.total_files||0} | Failed: ${data.total_failed||0} | Status: ${data.status||'not started'}`;
+
+  const logs = data.logs || [];
+  document.getElementById('logbox').innerText = logs.join("\n");
+  document.getElementById('logbox').scrollTop = document.getElementById('logbox').scrollHeight;
+
+  if (data.status === "running") {
+    setTimeout(poll, 3000);
+  }
+}
+</script>
+</body>
+</html>
