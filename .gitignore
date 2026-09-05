@@ -1,0 +1,6 @@
+.env
+backup.db
+downloads/*
+!downloads/.gitkeep
+__pycache__/
+*.pyc
