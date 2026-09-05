@@ -75,7 +75,12 @@ def get_video_attr(message):
 
 @app.on_event("startup")
 async def startup():
-    await ensure_connected()
+    try:
+        await ensure_connected()
+    except Exception as e:
+        # App crash nahi hoga — dashboard pe clear error dikhega, Railway
+        # bar-bar restart (crash loop) nahi karega.
+        print(f"STARTUP WARNING: {e}")
     asyncio.create_task(keep_alive_loop())
     asyncio.create_task(start_bot(trigger_backup))
 
