@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from database import init_db, get_progress, upsert_progress, add_log
-from telegram_client import client, list_dialogs, classify_media
+from telegram_client import client, list_dialogs, classify_media, ensure_connected
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -18,20 +18,28 @@ backup_tasks = {}  # channel_id -> asyncio task (in-memory tracker)
 
 @app.on_event("startup")
 async def startup():
-    await client.connect()
-    if not await client.is_user_authorized():
-        print("WARNING: Telegram session not authorized. "
-              "Run generate_session.py locally first and set TG_SESSION_STRING.")
+    await ensure_connected()
+    asyncio.create_task(keep_alive_loop())
+
+
+async def keep_alive_loop():
+    """Runs forever in background — pings Telegram every few minutes so the
+    connection never sits idle long enough to get dropped."""
+    while True:
+        await asyncio.sleep(240)
+        try:
+            await ensure_connected()
+            await client.get_me()
+        except Exception as e:
+            print(f"keep_alive ping failed: {e}")
 
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    if not await client.is_user_authorized():
-        return HTMLResponse(
-            "<h3>Telegram session not authorized. Check Railway logs and "
-            "make sure TG_SESSION_STRING is set correctly.</h3>"
-        )
-    dialogs = await list_dialogs()
+    try:
+        dialogs = await list_dialogs()
+    except RuntimeError as e:
+        return HTMLResponse(f"<h3>{e}</h3>")
     return templates.TemplateResponse(
         "channels.html", {"request": request, "dialogs": dialogs}
     )
@@ -64,6 +72,7 @@ async def status(channel_id: str):
 
 async def run_backup(source_id: int, dest_id: int):
     channel_id_key = str(source_id)
+    await ensure_connected()
     source_entity = await client.get_entity(source_id)
     dest_entity = await client.get_entity(dest_id)
     source_name = getattr(source_entity, "title", str(source_id))
@@ -90,6 +99,7 @@ async def run_backup(source_id: int, dest_id: int):
         media_type = classify_media(message)
         if media_type:
             try:
+                await ensure_connected()
                 local_path = await message.download_media(file="downloads/")
                 if local_path:
                     caption = message.text or ""

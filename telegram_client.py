@@ -9,10 +9,29 @@ API_ID = int(os.environ["TG_API_ID"])
 API_HASH = os.environ["TG_API_HASH"]
 SESSION_STRING = os.environ.get("TG_SESSION_STRING", "")
 
-client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
+client = TelegramClient(
+    StringSession(SESSION_STRING),
+    API_ID,
+    API_HASH,
+    connection_retries=None,   # keep retrying forever instead of giving up
+    retry_delay=2,
+    auto_reconnect=True,
+)
+
+
+async def ensure_connected():
+    """Call this before any Telegram API call — reconnects if the
+    connection dropped due to idle timeout or network blip."""
+    if not client.is_connected():
+        await client.connect()
+    if not await client.is_user_authorized():
+        raise RuntimeError(
+            "Telegram session not authorized. TG_SESSION_STRING check karo."
+        )
 
 
 async def list_dialogs():
+    await ensure_connected()
     dialogs = await client.get_dialogs()
     result = []
     for d in dialogs:
