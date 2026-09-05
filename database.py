@@ -25,6 +25,17 @@ def init_db():
             logs TEXT DEFAULT '[]'
         )
     """)
+    # Ye table har successfully bheje gaye message ko permanently record karta
+    # hai. Isse agar tool beech me restart ho jaye, dobara start karne par
+    # wahi messages skip ho jayenge jo already bhej diye gaye the — chahe
+    # 'last_message_id' checkpoint thoda peeche ho.
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS sent_messages (
+            channel_id TEXT,
+            message_id INTEGER,
+            PRIMARY KEY (channel_id, message_id)
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -80,3 +91,20 @@ def add_log(channel_id, message):
     if len(logs) > MAX_LOG_LINES:
         logs = logs[-MAX_LOG_LINES:]
     upsert_progress(channel_id, logs=json.dumps(logs))
+
+
+def is_already_sent(channel_id, message_id):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM sent_messages WHERE channel_id=? AND message_id=?",
+            (channel_id, message_id)
+        ).fetchone()
+        return row is not None
+
+
+def mark_sent(channel_id, message_id):
+    with get_db() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO sent_messages (channel_id, message_id) VALUES (?, ?)",
+            (channel_id, message_id)
+        )

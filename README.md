@@ -63,8 +63,21 @@ git push -u origin main
    hoga (last message se aage se chalega, dobara shuru nahi hoga)
 
 ## Important Notes
+- **Duplicate-proof:** Har successfully bheja gaya message DB me record hota
+  hai. Agar tool restart ho jaye (Railway crash/redeploy) aur aap dobara
+  "Backup Start" dabao, jo messages pehle se bhej diye gaye the wo dobara
+  nahi bhejenge — sirf jo baaki hai wahi continue hoga.
+- **Caption counting:** Har video/photo/file ke saath uska serial number bhi
+  jata hai (jaise "Video #12", "Photo #5") — original caption (agar tha) uske
+  neeche add ho jata hai.
 - **Rate limit:** Telegram thoda dheere-dheere allow karta hai bahut saara
   download/upload karne pe. 10,000 items me time lagega, chalta rehne dena.
+- **Speed control (optional):** Railway Variables me ye daal sakte ho:
+  ```
+  CONCURRENCY = 5   (ek saath kitne messages process honge)
+  BATCH_SIZE = 5    (kitne messages ke baad progress save ho)
+  ```
+  Zyada CONCURRENCY (15-20+) mat rakhna — Telegram FloodWaitError de sakta hai.
 - **Storage:** Railway ka disk temporary hota hai — file download hote hi
   turant send karke delete ho jaati hai, isliye disk space ki dikkat nahi
   aani chahiye.
